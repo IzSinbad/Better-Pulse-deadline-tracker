@@ -19,8 +19,9 @@ export function DetailPanel({ deadline: d, onClose }: DetailPanelProps) {
 
   return (
     <AnimatePresence>
-      {/* backdrop */}
+      {/* backdrop — needs a unique key so AnimatePresence can track it */}
       <motion.div
+        key="detail-backdrop"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
@@ -31,6 +32,7 @@ export function DetailPanel({ deadline: d, onClose }: DetailPanelProps) {
 
       {/* panel slides in from the right */}
       <motion.div
+        key="detail-panel"
         initial={{ x: '100%', opacity: 0 }}
         animate={{ x: 0, opacity: 1 }}
         exit={{ x: '100%', opacity: 0 }}
