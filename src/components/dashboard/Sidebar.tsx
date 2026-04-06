@@ -19,8 +19,10 @@ interface SidebarProps {
 }
 
 const QUICK_FILTERS = [
-  { id: 'timeline', label: 'All Upcoming', icon: '📋' },
-  { id: 'urgent', label: 'Urgent (< 72h)', icon: '🔴' },
+  { id: 'timeline',      label: 'All Upcoming',  icon: '📋' },
+  { id: 'urgent',        label: 'Urgent',         icon: '🔴' },
+  { id: 'announcements', label: 'Announcements',  icon: '📢' },
+  { id: 'done',          label: 'Done',           icon: '✅' },
 ]
 
 export function Sidebar({ user, isDark, onToggleDark }: SidebarProps) {

@@ -16,14 +16,16 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Not logged in' }, { status: 401 })
   }
 
+  const showCompleted = new URL(request.url).searchParams.get('completed') === 'true'
+
   // grab everything in parallel — faster
   const [deadlinesResult, targetGradesResult, userResult] = await Promise.all([
     supabaseServer
       .from('deadlines')
       .select('*')
       .eq('user_id', session.userId)
-      .eq('is_completed', false)
-      .order('due_at', { ascending: true }),
+      .eq('is_completed', showCompleted)
+      .order('due_at', { ascending: !showCompleted }),
     supabaseServer
       .from('target_grades')
       .select('*')

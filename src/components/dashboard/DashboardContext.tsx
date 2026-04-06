@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState } from 'react'
 
-type ViewType = 'timeline' | 'calendar' | 'course' | 'urgent' | 'announcements'
+export type ViewType = 'timeline' | 'calendar' | 'course' | 'urgent' | 'announcements' | 'done'
 
 interface DashboardContextValue {
   activeView: ViewType
