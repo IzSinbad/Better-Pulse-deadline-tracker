@@ -1,0 +1,124 @@
+@startuml database
+!theme plain
+skinparam linetype ortho
+skinparam roundcorner 8
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName Inter, Segoe UI, Arial
+skinparam defaultFontSize 12
+
+skinparam entity {
+  BackgroundColor #EEF2FF
+  BorderColor #6366F1
+  FontColor #1a1a2e
+  HeaderBackgroundColor #6366F1
+  HeaderFontColor #FFFFFF
+  HeaderFontSize 13
+  HeaderFontStyle bold
+}
+
+skinparam arrow {
+  Color #6366F1
+  FontColor #6366F1
+  FontSize 11
+}
+
+' ── Core ──────────────────────────────────────────────
+
+entity "**users**" as users {
+  * id : uuid <<PK>>
+  --
+  email : text
+  display_name : text
+  brightspace_ical_url_encrypted : text
+  anthropic_key_encrypted : text
+  last_login : timestamptz
+  created_at : timestamptz
+}
+
+entity "**sessions**" as sessions {
+  * id : uuid <<PK>>
+  --
+  * user_id : uuid <<FK>>
+  token_hash : text
+  expires_at : timestamptz
+  device_hint : text
+}
+
+entity "**preferences**" as preferences {
+  * user_id : uuid <<PK, FK>>
+  --
+  dark_mode : boolean
+  default_view : text
+  notification_lead_hours : integer
+  confetti_enabled : boolean
+}
+
+' ── Deadlines ─────────────────────────────────────────
+
+entity "**deadlines**" as deadlines {
+  * id : uuid <<PK>>
+  --
+  * user_id : uuid <<FK>>
+  brightspace_id : text
+  course_code : text
+  course_name : text
+  title : text
+  type : text
+  due_at : timestamptz
+  weight_percent : numeric
+  is_completed : boolean
+  is_manual : boolean
+  deeplink_url : text
+  synced_at : timestamptz
+}
+
+entity "**target_grades**" as target_grades {
+  * id : uuid <<PK>>
+  --
+  * user_id : uuid <<FK>>
+  course_code : text
+  target_percent : numeric
+}
+
+' ── Notifications ─────────────────────────────────────
+
+entity "**push_subscriptions**" as push_subs {
+  * id : uuid <<PK>>
+  --
+  * user_id : uuid <<FK>>
+  endpoint : text
+  subscription_json : text
+  updated_at : timestamptz
+}
+
+entity "**notification_log**" as notif_log {
+  * id : uuid <<PK>>
+  --
+  * user_id : uuid <<FK>>
+  ref_id : text
+  notification_type : text
+  sent_at : timestamptz
+}
+
+' ── Announcements ─────────────────────────────────────
+
+entity "**announcement_feeds**" as feeds {
+  * id : uuid <<PK>>
+  --
+  * user_id : uuid <<FK>>
+  feed_url_encrypted : text
+  course_name : text
+  created_at : timestamptz
+}
+
+' ── Relationships ─────────────────────────────────────
+
+users ||--o{ sessions         : "30-day login tokens"
+users ||--|| preferences      : "one per user"
+users ||--o{ deadlines        : "owns"
+users ||--o{ target_grades    : "sets per course"
+users ||--o{ push_subs        : "one per device"
+users ||--o{ notif_log        : "tracks sent alerts"
+users ||--o{ feeds            : "RSS subscriptions"
+
+@enduml

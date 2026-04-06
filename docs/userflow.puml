@@ -1,0 +1,198 @@
+@startuml userflow
+!theme plain
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName Inter, Segoe UI, Arial
+skinparam defaultFontSize 12
+skinparam roundcorner 8
+
+skinparam activity {
+  BackgroundColor #EEF2FF
+  BorderColor #6366F1
+  FontColor #1a1a2e
+  DiamondBackgroundColor #F5F3FF
+  DiamondBorderColor #8B5CF6
+  DiamondFontColor #1a1a2e
+  StartColor #6366F1
+  EndColor #6366F1
+  BarColor #6366F1
+}
+
+skinparam arrow {
+  Color #6366F1
+  FontColor #4B5563
+  FontSize 11
+}
+
+skinparam note {
+  BackgroundColor #FFF7ED
+  BorderColor #F97316
+  FontColor #4B5563
+}
+
+' ══════════════════════════════════════════════════════
+' FLOW 1 — First-Time Setup
+' ══════════════════════════════════════════════════════
+
+|#EEF2FF| Student |
+|#F0FDF4| Better Pulse |
+|#FFF7ED| Brightspace |
+
+title **User Flow  ·  better_pulse**\n
+
+start
+
+partition "**1  ·  First-Time Setup**" {
+
+  |Student|
+  :Visit app URL;
+
+  |Better Pulse|
+  :Show magic link login form;
+
+  |Student|
+  :Enter Conestoga email\n(@conestogac.on.ca);
+
+  |Better Pulse|
+  if (Valid Conestoga domain?) then (yes)
+    :Send magic link via Supabase;
+  else (no)
+    :Reject — domain not allowed;
+    stop
+  endif
+
+  |Student|
+  :Click link in email;
+
+  |Better Pulse|
+  :Verify Supabase token\nCreate session cookie (30 days)\nCreate user record;
+
+  if (First login?) then (yes)
+    :Redirect → /setup;
+
+    |Student|
+    :Paste Brightspace iCal URL\n(from Calendar → Settings → Feeds);
+
+    |Better Pulse|
+    :Validate iCal URL;
+
+    |Brightspace|
+    :Return .ics calendar feed;
+
+    |Better Pulse|
+    :Parse deadlines\nStore in database\nRedirect → /dashboard;
+
+  else (returning user)
+    :Redirect → /dashboard;
+  endif
+}
+
+' ══════════════════════════════════════════════════════
+' FLOW 2 — Daily Use
+' ══════════════════════════════════════════════════════
+
+partition "**2  ·  Daily Dashboard Use**" {
+
+  |Student|
+  :Open dashboard;
+
+  |Better Pulse|
+  :Load deadlines from DB\nSort by urgency + due date\nShow countdowns;
+
+  fork
+    |Student|
+    :Tap deadline card;
+
+    |Better Pulse|
+    :Slide in detail panel\n(due date · weight · grade impact\nBrightspace deep link);
+
+    |Student|
+    if (Already submitted?) then (yes)
+      :Tap Mark as Done;
+      |Better Pulse|
+      :Set is_completed = true\nAnimate card out;
+    else (no)
+      :Tap Open in Brightspace;
+      |Brightspace|
+      :Open submission page;
+    endif
+
+  fork again
+    |Student|
+    :Tap Announcements tab;
+
+    |Better Pulse|
+    :Fetch saved RSS feeds live;
+
+    |Brightspace|
+    :Return RSS XML;
+
+    |Better Pulse|
+    :Parse + display announcements\nExpand card to read full post;
+
+  fork again
+    |Student|
+    :Tap Done tab;
+
+    |Better Pulse|
+    :Show completed deadlines\nwith strikethrough;
+
+    |Student|
+    if (Marked done by mistake?) then (yes)
+      :Tap Undo;
+      |Better Pulse|
+      :Set is_completed = false\nItem returns to Timeline;
+    else (no)
+      :Leave it;
+    endif
+
+  fork again
+    |Student|
+    :Tap Sync button;
+
+    |Better Pulse|
+    :Fetch fresh iCal from Brightspace\nPreserve completed state\nUpdate deadlines in DB;
+
+  end fork
+}
+
+' ══════════════════════════════════════════════════════
+' FLOW 3 — Push Notifications
+' ══════════════════════════════════════════════════════
+
+partition "**3  ·  Push Notifications  (background)**" {
+
+  |Better Pulse|
+  :Vercel Cron fires\n09:00 UTC every day;
+
+  :Fetch all subscribed users;
+
+  fork
+    :For each user — check deadlines;
+    :Find items due in ~10d / ~5d / ~1d;
+
+    if (Already notified for this window?) then (no)
+      :Send push notification\nLog in notification_log;
+    else (yes)
+      :Skip — already sent;
+    endif
+
+  fork again
+    :For each user — check RSS feeds;
+    :Fetch feeds, find items < 48h old;
+
+    if (Already notified for this item?) then (no)
+      :Send push notification\nLog in notification_log;
+    else (yes)
+      :Skip;
+    endif
+
+  end fork
+
+  |Student|
+  :Receive notification on phone\n(banner · badge · sound);
+  :Tap → opens dashboard;
+}
+
+stop
+
+@enduml

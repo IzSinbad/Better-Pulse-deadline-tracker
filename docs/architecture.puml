@@ -1,0 +1,129 @@
+@startuml architecture
+!theme plain
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName Inter, Segoe UI, Arial
+skinparam defaultFontSize 12
+skinparam roundcorner 10
+skinparam nodesep 40
+skinparam ranksep 50
+
+skinparam rectangle {
+  BackgroundColor #EEF2FF
+  BorderColor #6366F1
+  FontColor #1a1a2e
+  BorderThickness 1.5
+}
+
+skinparam component {
+  BackgroundColor #F5F3FF
+  BorderColor #8B5CF6
+  FontColor #1a1a2e
+}
+
+skinparam database {
+  BackgroundColor #ECFDF5
+  BorderColor #10B981
+  FontColor #1a1a2e
+}
+
+skinparam cloud {
+  BackgroundColor #FFF7ED
+  BorderColor #F97316
+  FontColor #1a1a2e
+}
+
+skinparam arrow {
+  Color #6366F1
+  FontColor #4B5563
+  FontSize 11
+}
+
+' ── Client ────────────────────────────────────────────
+
+rectangle "**Client**" as client_layer {
+  component "Browser / PWA\n(iPhone · Android · Desktop)" as client
+}
+
+' ── Vercel Edge ───────────────────────────────────────
+
+rectangle "**Vercel  ·  Next.js 16 App Router**" as vercel_layer {
+
+  rectangle "**Pages**" as pages_box {
+    component "/ Landing" as page_landing
+    component "/setup  Setup Wizard" as page_setup
+    component "/dashboard  Dashboard" as page_dash
+    component "/auth/callback  Magic Link Handler" as page_callback
+  }
+
+  rectangle "**API Routes**" as api_box {
+    component "/api/auth/finalize" as api_auth
+    component "/api/brightspace/sync-ical" as api_sync
+    component "/api/brightspace/deadlines" as api_deadlines
+    component "/api/announcements" as api_announce
+    component "/api/push/subscribe" as api_push
+    component "/api/assistant" as api_assistant
+    component "/api/cron/notifications" as api_cron
+    component "/api/deadlines/[id]/complete" as api_done
+  }
+}
+
+' ── Supabase ──────────────────────────────────────────
+
+database "**Supabase**\n(PostgreSQL)" as supabase {
+  component "users · sessions" as db_auth
+  component "deadlines · target_grades" as db_deadlines
+  component "preferences" as db_prefs
+  component "push_subscriptions\nnotification_log\nannouncement_feeds" as db_notifs
+}
+
+' ── External Services ─────────────────────────────────
+
+rectangle "**External Services**" as external_layer {
+  cloud "Brightspace\neConestoga" as brightspace {
+    component "iCal Feed  (.ics)" as ical
+    component "RSS Feeds  (per course)" as rss
+  }
+
+  cloud "Anthropic" as anthropic {
+    component "Claude API\nclaude-sonnet-4-6" as claude
+  }
+
+  cloud "Web Push" as webpush_cloud {
+    component "VAPID / FCM / APNs" as vapid
+  }
+
+  cloud "Vercel Cron" as cron_cloud {
+    component "Daily  ·  09:00 UTC" as cron_trigger
+  }
+}
+
+' ── Connections ───────────────────────────────────────
+
+client          --> page_landing    : HTTPS
+client          --> page_dash       : HTTPS
+client          --> api_sync        : POST sync
+client          --> api_deadlines   : GET deadlines
+client          --> api_announce    : GET announcements
+client          --> api_push        : POST subscribe
+client          --> api_assistant   : POST chat (owner only)
+client          --> api_done        : PATCH mark done
+
+page_callback   --> api_auth        : POST finalize session
+
+api_auth        --> supabase        : upsert user + session
+api_sync        --> ical            : fetch .ics
+api_sync        --> supabase        : upsert deadlines
+api_deadlines   --> supabase        : read deadlines
+api_announce    --> rss             : fetch RSS XML
+api_announce    --> supabase        : read feed URLs
+api_push        --> supabase        : save subscription
+api_assistant   --> claude          : stream response
+api_done        --> supabase        : update is_completed
+
+cron_trigger    --> api_cron        : GET (bearer token)
+api_cron        --> supabase        : read subscribers + deadlines + feeds
+api_cron        --> rss             : check new announcements
+api_cron        --> vapid           : send push notifications
+api_cron        --> supabase        : write notification_log
+
+@enduml
