@@ -10,16 +10,18 @@ import { TimelineView } from '@/components/views/TimelineView'
 import { CalendarView } from '@/components/views/CalendarView'
 import { CourseView } from '@/components/views/CourseView'
 import { UrgentView } from '@/components/views/UrgentView'
+import { AnnouncementsView } from '@/components/views/AnnouncementsView'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import { URGENCY_THRESHOLDS } from '@/types/app'
 
-type ViewType = 'timeline' | 'calendar' | 'course' | 'urgent'
+type ViewType = 'timeline' | 'calendar' | 'course' | 'urgent' | 'announcements'
 
 const VIEWS: { id: ViewType; label: string; icon: string }[] = [
   { id: 'timeline', label: 'Timeline', icon: '⬇️' },
   { id: 'calendar', label: 'Calendar', icon: '🗓️' },
   { id: 'course', label: 'By Course', icon: '📚' },
   { id: 'urgent', label: 'Urgent', icon: '🔴' },
+  { id: 'announcements', label: 'Announcements', icon: '📢' },
 ]
 
 export function DashboardContent() {
@@ -104,6 +106,7 @@ export function DashboardContent() {
       {activeView === 'calendar' && <CalendarView deadlines={upcoming} />}
       {activeView === 'course' && <CourseView deadlines={upcoming} />}
       {activeView === 'urgent' && <UrgentView deadlines={upcoming} />}
+      {activeView === 'announcements' && <AnnouncementsView />}
     </div>
   )
 }

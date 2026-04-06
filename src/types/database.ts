@@ -39,6 +39,14 @@ export interface Preference {
   updated_at: string
 }
 
+export interface AnnouncementFeed {
+  id: string
+  user_id: string
+  feed_url_encrypted: string
+  course_name: string
+  created_at: string
+}
+
 export interface Deadline {
   id: string
   user_id: string
