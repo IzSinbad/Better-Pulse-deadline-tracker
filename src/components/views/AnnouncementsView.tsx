@@ -15,6 +15,7 @@ export function AnnouncementsView() {
   const [announcements, setAnnouncements] = useState<RSSAnnouncement[]>([])
   const [feeds, setFeeds] = useState<Feed[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
   const [expanded, setExpanded] = useState<string | null>(null)
   const [showAddForm, setShowAddForm] = useState(false)
   const [feedInput, setFeedInput] = useState('')
@@ -27,13 +28,18 @@ export function AnnouncementsView() {
 
   async function loadAnnouncements() {
     setIsLoading(true)
+    setLoadError('')
     try {
       const res = await fetch('/api/announcements')
       const data = await res.json()
-      setAnnouncements(data.announcements ?? [])
-      setFeeds(data.feeds ?? [])
-    } catch {
-      // silent fail
+      if (data.error && !data.announcements) {
+        setLoadError(data.error)
+      } else {
+        setAnnouncements(data.announcements ?? [])
+        setFeeds(data.feeds ?? [])
+      }
+    } catch (err) {
+      setLoadError('Could not load announcements')
     } finally {
       setIsLoading(false)
     }
@@ -75,6 +81,15 @@ export function AnnouncementsView() {
     return (
       <div className="flex items-center justify-center py-16">
         <div className="w-5 h-5 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
+
+  if (loadError) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 gap-2">
+        <p className="text-sm" style={{ color: 'var(--urgent-critical)' }}>{loadError}</p>
+        <button onClick={loadAnnouncements} className="text-xs" style={{ color: 'var(--accent)' }}>Try again</button>
       </div>
     )
   }
