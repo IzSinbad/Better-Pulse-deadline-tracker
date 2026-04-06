@@ -31,6 +31,17 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Not logged in' }, { status: 401 })
   }
 
+  // assistant is only available to the app owner
+  const { data: caller } = await supabaseServer
+    .from('users')
+    .select('email')
+    .eq('id', session.userId)
+    .single()
+
+  if (caller?.email?.toLowerCase() !== 'afarid8011@conestogac.on.ca') {
+    return NextResponse.json({ error: 'Assistant not available' }, { status: 403 })
+  }
+
   let body: { message: string; history: ChatMessage[]; context: AssistantContext }
   try {
     body = await request.json()

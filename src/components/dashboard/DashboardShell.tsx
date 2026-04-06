@@ -14,6 +14,7 @@ interface DashboardShellProps {
     email: string
     display_name: string | null
   }
+  canUseAssistant: boolean
   preferences: {
     dark_mode: boolean
     default_view: string
@@ -23,7 +24,7 @@ interface DashboardShellProps {
   children: React.ReactNode
 }
 
-export function DashboardShell({ user, preferences, children }: DashboardShellProps) {
+export function DashboardShell({ user, canUseAssistant, preferences, children }: DashboardShellProps) {
   const [isDark, setIsDark] = useState(preferences.dark_mode)
   const [activeFilter, setActiveFilter] = useState<string>('all')
   // start both panels closed — open them after mount only on wide screens
@@ -92,17 +93,19 @@ export function DashboardShell({ user, preferences, children }: DashboardShellPr
 
           <div className="flex-1" />
 
-          <button
-            onClick={() => setIsAssistantOpen(prev => !prev)}
-            className="p-1.5 rounded-lg transition-colors hover:bg-[var(--bg-hover)] text-xs flex items-center gap-1.5"
-            style={{ color: isAssistantOpen ? 'var(--accent)' : 'var(--text-muted)' }}
-            title="Toggle study assistant"
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-            </svg>
-            <span className="hidden sm:inline">Study Assistant</span>
-          </button>
+          {canUseAssistant && (
+            <button
+              onClick={() => setIsAssistantOpen(prev => !prev)}
+              className="p-1.5 rounded-lg transition-colors hover:bg-[var(--bg-hover)] text-xs flex items-center gap-1.5"
+              style={{ color: isAssistantOpen ? 'var(--accent)' : 'var(--text-muted)' }}
+              title="Toggle study assistant"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+              </svg>
+              <span className="hidden sm:inline">Study Assistant</span>
+            </button>
+          )}
         </div>
 
         {/* the actual page content (timeline/calendar/course/urgent views) */}
@@ -112,7 +115,7 @@ export function DashboardShell({ user, preferences, children }: DashboardShellPr
       </div>
 
       {/* right panel — assistant chat, overlays on mobile */}
-      {isAssistantOpen && (
+      {canUseAssistant && isAssistantOpen && (
         <>
           {/* mobile backdrop */}
           <div

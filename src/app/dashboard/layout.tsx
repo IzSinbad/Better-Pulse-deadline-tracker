@@ -26,9 +26,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   if (!userResult.data) redirect('/')
 
+  const canUseAssistant = userResult.data.email.toLowerCase() === 'afarid8011@conestogac.on.ca'
+
   return (
     <DashboardShell
       user={userResult.data}
+      canUseAssistant={canUseAssistant}
       preferences={prefsResult.data ?? {
         dark_mode: true,
         default_view: 'timeline',
