@@ -1,9 +1,7 @@
 'use client'
 
-// the main deadline card — shows in the timeline, course, and urgent views
-// colored strip on left edge based on urgency
-// hover shows grade impact bar
-// click expands to DetailPanel
+// deadline card — colored urgency strip, countdown, hover grade impact bar
+// click expands to DetailPanel, checkmark button marks it done
 
 import { useState } from 'react'
 import { motion } from 'framer-motion'
@@ -15,14 +13,48 @@ import { DetailPanel } from './DetailPanel'
 
 interface DeadlineCardProps {
   deadline: EnrichedDeadline
+  onCompleted?: (id: string) => void
 }
 
-export function DeadlineCard({ deadline: d }: DeadlineCardProps) {
+export function DeadlineCard({ deadline: d, onCompleted }: DeadlineCardProps) {
   const [isExpanded, setIsExpanded] = useState(false)
   const [isHovered, setIsHovered] = useState(false)
+  const [isMarkingDone, setIsMarkingDone] = useState(false)
+  const [isDone, setIsDone] = useState(false)
   const countdown = useCountdown(d.due_at)
 
   const urgencyStrip = urgencyStripClass(d.urgency)
+
+  async function handleMarkDone(e: React.MouseEvent) {
+    // stop click from opening the detail panel
+    e.stopPropagation()
+    if (isMarkingDone) return
+
+    setIsMarkingDone(true)
+    try {
+      const res = await fetch(`/api/deadlines/${d.id}/complete`, { method: 'PATCH' })
+      if (res.ok) {
+        setIsDone(true)
+        // give it a moment so the user sees the checkmark, then remove from list
+        setTimeout(() => onCompleted?.(d.id), 600)
+      }
+    } catch {
+      // silently fail — not the end of the world
+    } finally {
+      setIsMarkingDone(false)
+    }
+  }
+
+  if (isDone) {
+    return (
+      <motion.div
+        initial={{ opacity: 1, height: 'auto' }}
+        animate={{ opacity: 0, height: 0 }}
+        transition={{ duration: 0.3 }}
+        className="overflow-hidden"
+      />
+    )
+  }
 
   return (
     <>
@@ -43,7 +75,7 @@ export function DeadlineCard({ deadline: d }: DeadlineCardProps) {
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
-        {/* urgency strip — the colored bar on the left edge */}
+        {/* urgency strip */}
         <div
           className={`w-1 shrink-0 ${urgencyStrip}`}
           style={{ opacity: d.urgency === 'low' ? 0.5 : 1 }}
@@ -52,22 +84,22 @@ export function DeadlineCard({ deadline: d }: DeadlineCardProps) {
         {/* main content */}
         <div className="flex-1 px-4 py-3 min-w-0">
           <div className="flex items-start gap-2">
-            {/* type icon */}
             <span className="text-base leading-none mt-0.5 shrink-0">
               {deadlineTypeIcon(d.type)}
             </span>
 
             <div className="flex-1 min-w-0">
-              {/* title + course */}
               <p className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>
                 {d.title}
               </p>
               <p className="text-xs mt-0.5 truncate" style={{ color: 'var(--text-muted)' }}>
-                {d.course_name || d.course_code}
+                {d.course_code && d.course_name && d.course_name !== d.course_code
+                  ? `${d.course_code} · ${d.course_name}`
+                  : d.course_name || d.course_code || 'Unknown Course'}
               </p>
             </div>
 
-            {/* right side — weight badge + countdown */}
+            {/* right side — badge + countdown + done button */}
             <div className="flex flex-col items-end gap-1 shrink-0">
               {d.weight_percent && (
                 <Badge variant="weight">{d.weight_percent}%</Badge>
@@ -87,14 +119,34 @@ export function DeadlineCard({ deadline: d }: DeadlineCardProps) {
             </div>
           </div>
 
-          {/* due date row */}
-          <div className="flex items-center gap-2 mt-2">
+          <div className="flex items-center justify-between mt-2">
             <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
               {formatDueDate(d.due_at)}
             </span>
+
+            {/* mark done button — always visible, not just on hover */}
+            <button
+              onClick={handleMarkDone}
+              disabled={isMarkingDone}
+              className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-md transition-all"
+              style={{
+                color: 'var(--text-muted)',
+                background: isHovered ? 'var(--bg-hover)' : 'transparent',
+              }}
+              title="Mark as submitted / done"
+            >
+              {isMarkingDone ? (
+                <span className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+              )}
+              <span>Done</span>
+            </button>
           </div>
 
-          {/* grade impact bar — slides in on hover */}
+          {/* grade impact bar on hover */}
           {isHovered && d.currentGrade !== null && d.weight_percent && (
             <motion.div
               initial={{ opacity: 0, scaleX: 0 }}
@@ -131,9 +183,12 @@ export function DeadlineCard({ deadline: d }: DeadlineCardProps) {
         </div>
       </motion.div>
 
-      {/* slide-in detail panel */}
       {isExpanded && (
-        <DetailPanel deadline={d} onClose={() => setIsExpanded(false)} />
+        <DetailPanel
+          deadline={d}
+          onClose={() => setIsExpanded(false)}
+          onCompleted={(id) => { setIsDone(true); setTimeout(() => onCompleted?.(id), 600) }}
+        />
       )}
     </>
   )

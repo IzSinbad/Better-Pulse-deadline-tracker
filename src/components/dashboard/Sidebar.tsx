@@ -6,6 +6,7 @@
 import { useState, useEffect } from 'react'
 import { useSync } from '@/hooks/useSync'
 import { cn } from '@/lib/utils'
+import { useDashboard } from './DashboardContext'
 
 interface SidebarProps {
   user: {
@@ -13,20 +14,17 @@ interface SidebarProps {
     email: string
     display_name: string | null
   }
-  activeFilter: string
-  onFilterChange: (filter: string) => void
   isDark: boolean
   onToggleDark: () => void
 }
 
 const QUICK_FILTERS = [
-  { id: 'all', label: 'All Upcoming', icon: '📋' },
-  { id: 'week', label: 'This Week', icon: '📅' },
-  { id: 'next7', label: 'Next 7 Days', icon: '🗓️' },
+  { id: 'timeline', label: 'All Upcoming', icon: '📋' },
   { id: 'urgent', label: 'Urgent (< 72h)', icon: '🔴' },
 ]
 
-export function Sidebar({ user, activeFilter, onFilterChange, isDark, onToggleDark }: SidebarProps) {
+export function Sidebar({ user, isDark, onToggleDark }: SidebarProps) {
+  const { activeView, setActiveView } = useDashboard()
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
   const [notifState, setNotifState] = useState<'unknown' | 'subscribed' | 'denied' | 'loading'>('unknown')
   const { isSyncing, progress, error, sync } = useSync(() => {
@@ -135,10 +133,10 @@ export function Sidebar({ user, activeFilter, onFilterChange, isDark, onToggleDa
           {QUICK_FILTERS.map(filter => (
             <button
               key={filter.id}
-              onClick={() => onFilterChange(filter.id)}
+              onClick={() => setActiveView(filter.id as Parameters<typeof setActiveView>[0])}
               className={cn(
                 'w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors text-left',
-                activeFilter === filter.id
+                activeView === filter.id
                   ? 'bg-indigo-500/15 text-indigo-300'
                   : 'hover:bg-[var(--bg-hover)] text-[var(--text-secondary)]'
               )}
@@ -158,13 +156,15 @@ export function Sidebar({ user, activeFilter, onFilterChange, isDark, onToggleDa
               { id: 'timeline', label: 'Timeline', icon: '⬇️' },
               { id: 'calendar', label: 'Calendar', icon: '🗓️' },
               { id: 'course', label: 'By Course', icon: '📚' },
+              { id: 'urgent', label: 'Urgent', icon: '🔴' },
+              { id: 'announcements', label: 'Announcements', icon: '📢' },
             ].map(view => (
               <button
                 key={view.id}
-                onClick={() => onFilterChange(view.id)}
+                onClick={() => setActiveView(view.id as Parameters<typeof setActiveView>[0])}
                 className={cn(
                   'w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors text-left',
-                  activeFilter === view.id
+                  activeView === view.id
                     ? 'bg-indigo-500/15 text-indigo-300'
                     : 'hover:bg-[var(--bg-hover)] text-[var(--text-secondary)]'
                 )}

@@ -3,9 +3,10 @@
 // the main content area of the dashboard — handles view switching and loads deadlines
 // sits inside the DashboardShell, between the sidebar and assistant panel
 
-import { useState, useMemo } from 'react'
+import { useMemo } from 'react'
 import dynamic from 'next/dynamic'
 import { useDeadlines } from '@/hooks/useDeadlines'
+import { useDashboard } from './DashboardContext'
 import { WorkloadHeatmap } from './WorkloadHeatmap'
 import { TimelineView } from '@/components/views/TimelineView'
 import { CalendarView } from '@/components/views/CalendarView'
@@ -31,7 +32,7 @@ const VIEWS: { id: ViewType; label: string; icon: string }[] = [
 ]
 
 export function DashboardContent() {
-  const [activeView, setActiveView] = useState<ViewType>('timeline')
+  const { activeView, setActiveView } = useDashboard()
   const { deadlines, isLoading, error, lastSynced } = useDeadlines()
 
   // filter to only upcoming (not overdue completions)
@@ -73,8 +74,11 @@ export function DashboardContent() {
       {/* heatmap at top — always visible */}
       <WorkloadHeatmap deadlines={upcoming} />
 
-      {/* view switcher tabs */}
-      <div className="flex items-center gap-1 mb-5 border-b pb-0" style={{ borderColor: 'var(--border)' }}>
+      {/* view switcher tabs — scrollable on mobile so 5 tabs don't overflow */}
+      <div
+        className="flex items-center gap-1 mb-5 border-b pb-0"
+        style={{ borderColor: 'var(--border)', overflowX: 'auto', scrollbarWidth: 'none' }}
+      >
         {VIEWS.map(view => (
           <button
             key={view.id}

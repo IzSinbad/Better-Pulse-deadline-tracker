@@ -7,6 +7,7 @@
 import { useState, useEffect } from 'react'
 import { Sidebar } from './Sidebar'
 import { AssistantPanel } from './AssistantPanel'
+import { DashboardProvider } from './DashboardContext'
 
 interface DashboardShellProps {
   user: {
@@ -26,7 +27,6 @@ interface DashboardShellProps {
 
 export function DashboardShell({ user, canUseAssistant, preferences, children }: DashboardShellProps) {
   const [isDark, setIsDark] = useState(preferences.dark_mode)
-  const [activeFilter, setActiveFilter] = useState<string>('all')
   // start both panels closed — open them after mount only on wide screens
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [isAssistantOpen, setIsAssistantOpen] = useState(false)
@@ -50,6 +50,7 @@ export function DashboardShell({ user, canUseAssistant, preferences, children }:
   }
 
   return (
+    <DashboardProvider>
     <div className={isDark ? '' : 'light'} style={{ height: '100vh', overflow: 'hidden', display: 'flex' }}>
       {/* sidebar — collapsible on smaller screens */}
       <div
@@ -65,16 +66,14 @@ export function DashboardShell({ user, canUseAssistant, preferences, children }:
         {isSidebarOpen && (
           <Sidebar
             user={user}
-            activeFilter={activeFilter}
-            onFilterChange={setActiveFilter}
             isDark={isDark}
             onToggleDark={toggleDarkMode}
           />
         )}
       </div>
 
-      {/* main content area */}
-      <div style={{ flex: 1, overflow: 'auto', background: 'var(--bg-base)' }}>
+      {/* main content area — overflow-x hidden stops horizontal wobble */}
+      <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', background: 'var(--bg-base)', minWidth: 0 }}>
         {/* top bar — hamburger + view toggle buttons */}
         <div
           className="sticky top-0 z-10 flex items-center gap-2 px-4 py-3 border-b"
@@ -139,5 +138,6 @@ export function DashboardShell({ user, canUseAssistant, preferences, children }:
         </>
       )}
     </div>
+    </DashboardProvider>
   )
 }
