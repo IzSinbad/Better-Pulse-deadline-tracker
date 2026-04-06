@@ -1,0 +1,134 @@
+@import "tailwindcss";
+
+/* ---- design tokens ---- */
+:root {
+  /* dark mode by default — students work at night */
+  --bg-base: #0e0e11;
+  --bg-surface: #16161a;
+  --bg-elevated: #1e1e24;
+  --bg-hover: #2a2a32;
+
+  --text-primary: #f0f0f5;
+  --text-secondary: #9898aa;
+  --text-muted: #55556a;
+
+  --border: rgba(255, 255, 255, 0.06);
+  --border-focus: rgba(99, 102, 241, 0.5);
+
+  /* urgency colors */
+  --urgent-critical: #ef4444;
+  --urgent-high: #f97316;
+  --urgent-medium: #eab308;
+  --urgent-low: #22c55e;
+  --urgent-overdue: #dc2626;
+
+  /* accent */
+  --accent: #6366f1;
+  --accent-hover: #818cf8;
+
+  /* layout widths */
+  --sidebar-width: 260px;
+  --panel-width: 360px;
+}
+
+/* light mode toggle class */
+.light {
+  --bg-base: #f8f8fc;
+  --bg-surface: #ffffff;
+  --bg-elevated: #f0f0f8;
+  --bg-hover: #e8e8f0;
+  --text-primary: #1a1a2e;
+  --text-secondary: #6b6b80;
+  --text-muted: #9898aa;
+  --border: rgba(0, 0, 0, 0.08);
+}
+
+/* ---- base resets ---- */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  background: var(--bg-base);
+  color: var(--text-primary);
+  font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ---- scrollbar — subtle ---- */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--bg-hover); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+/* ---- typography ---- */
+h1, h2, h3, h4, h5, h6 {
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { color: var(--accent-hover); }
+
+/* ---- focus ring ---- */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ---- animations ---- */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.animate-fade-in { animation: fadeIn 0.2s ease-out both; }
+.animate-slide-in-right { animation: slideInRight 0.25s ease-out both; }
+.animate-spin { animation: spin 1s linear infinite; }
+
+/* ---- layout ---- */
+.dashboard-layout {
+  display: grid;
+  grid-template-columns: var(--sidebar-width) 1fr var(--panel-width);
+  height: 100vh;
+  overflow: hidden;
+}
+
+@media (max-width: 1024px) {
+  .dashboard-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ---- urgency utilities ---- */
+.urgency-critical { color: var(--urgent-critical); }
+.urgency-high { color: var(--urgent-high); }
+.urgency-medium { color: var(--urgent-medium); }
+.urgency-low { color: var(--urgent-low); }
+.urgency-overdue { color: var(--urgent-overdue); }
+
+.urgency-strip-critical { background: var(--urgent-critical); }
+.urgency-strip-high { background: var(--urgent-high); }
+.urgency-strip-medium { background: var(--urgent-medium); }
+.urgency-strip-low { background: var(--urgent-low); }
+.urgency-strip-overdue { background: var(--urgent-overdue); }
