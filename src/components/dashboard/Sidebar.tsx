@@ -3,7 +3,7 @@
 // sidebar — user info, course list, quick filters, sync button, settings
 // this is the nav hub of the whole app
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useSync } from '@/hooks/useSync'
 import { cn } from '@/lib/utils'
 
@@ -28,10 +28,65 @@ const QUICK_FILTERS = [
 
 export function Sidebar({ user, activeFilter, onFilterChange, isDark, onToggleDark }: SidebarProps) {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
+  const [notifState, setNotifState] = useState<'unknown' | 'subscribed' | 'denied' | 'loading'>('unknown')
   const { isSyncing, progress, error, sync } = useSync(() => {
-    // reload the page after sync so we get fresh deadlines
     window.location.reload()
   })
+
+  useEffect(() => {
+    if (!('Notification' in window) || !('serviceWorker' in navigator)) return
+    if (Notification.permission === 'denied') { setNotifState('denied'); return }
+    // check if already subscribed
+    navigator.serviceWorker.ready.then(reg => {
+      reg.pushManager.getSubscription().then(sub => {
+        setNotifState(sub ? 'subscribed' : 'unknown')
+      })
+    }).catch(() => {})
+  }, [])
+
+  async function handleNotifToggle() {
+    if (notifState === 'subscribed') {
+      // unsubscribe
+      const reg = await navigator.serviceWorker.ready
+      const sub = await reg.pushManager.getSubscription()
+      if (sub) {
+        await fetch('/api/push/subscribe', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ endpoint: sub.endpoint }),
+        })
+        await sub.unsubscribe()
+      }
+      setNotifState('unknown')
+      return
+    }
+
+    setNotifState('loading')
+    const permission = await Notification.requestPermission()
+    if (permission !== 'granted') { setNotifState('denied'); return }
+
+    const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
+    if (!vapidKey) { setNotifState('unknown'); return }
+
+    const reg = await navigator.serviceWorker.ready
+    const sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(vapidKey) as unknown as string,
+    })
+    await fetch('/api/push/subscribe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(sub.toJSON()),
+    })
+    setNotifState('subscribed')
+  }
+
+  function urlBase64ToUint8Array(base64String: string): Uint8Array {
+    const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
+    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/')
+    const rawData = atob(base64)
+    return Uint8Array.from([...rawData].map(c => c.charCodeAt(0)))
+  }
 
   async function handleLogout() {
     await fetch('/api/auth/logout', { method: 'POST' })
@@ -140,6 +195,21 @@ export function Sidebar({ user, activeFilter, onFilterChange, isDark, onToggleDa
           <p className="text-xs px-3" style={{ color: 'var(--urgent-critical)' }}>
             {error}
           </p>
+        )}
+
+        {/* notifications toggle */}
+        {'Notification' in (typeof window !== 'undefined' ? window : {}) && notifState !== 'denied' && (
+          <button
+            onClick={handleNotifToggle}
+            disabled={notifState === 'loading'}
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors hover:bg-[var(--bg-hover)] disabled:opacity-50"
+            style={{ color: notifState === 'subscribed' ? 'var(--accent)' : 'var(--text-secondary)' }}
+          >
+            <span className="text-base">{notifState === 'subscribed' ? '🔔' : '🔕'}</span>
+            <span>
+              {notifState === 'loading' ? 'Enabling...' : notifState === 'subscribed' ? 'Notifications on' : 'Enable notifications'}
+            </span>
+          </button>
         )}
 
         {/* dark mode toggle */}
