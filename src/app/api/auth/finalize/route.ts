@@ -28,6 +28,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Missing email or user ID' }, { status: 400 })
   }
 
+  // only allow Conestoga student/staff emails
+  if (!email.toLowerCase().endsWith('@conestogac.on.ca') && !email.toLowerCase().endsWith('@conestoga.ca')) {
+    return NextResponse.json({ error: 'Only Conestoga College email addresses are allowed' }, { status: 403 })
+  }
+
   // verify this Supabase user actually exists using the service role admin API
   // stops anyone from forging a finalize call with a random email
   const { data: authData, error: authError } = await supabaseServer.auth.admin.getUserById(supabaseUserId)
