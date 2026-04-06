@@ -180,7 +180,7 @@ export class BrightspaceAdapter implements LMSAdapter {
       `/d2l/api/le/${LE_VERSION}/${course.orgUnitId}/dropbox/folders/`
 
     while (nextUrl) {
-      const page = await this.fetch<D2LDropboxPage>(nextUrl)
+      const page: D2LDropboxPage = await this.fetch<D2LDropboxPage>(nextUrl)
       for (const f of page.Objects) {
         if (!f.DueDate) continue // skip ones with no due date
         items.push({
@@ -219,7 +219,7 @@ export class BrightspaceAdapter implements LMSAdapter {
       `/d2l/api/le/${LE_VERSION}/${course.orgUnitId}/quizzes/`
 
     while (nextUrl) {
-      const page = await this.fetch<D2LQuizPage>(nextUrl)
+      const page: D2LQuizPage = await this.fetch<D2LQuizPage>(nextUrl)
       for (const q of page.Objects) {
         if (!q.DueDate) continue
         items.push({
@@ -261,7 +261,7 @@ export class BrightspaceAdapter implements LMSAdapter {
       `/d2l/api/le/${LE_VERSION}/${course.orgUnitId}/discussions/forums/`
 
     while (nextUrl) {
-      const page = await this.fetch<D2LForumPage>(nextUrl)
+      const page: D2LForumPage = await this.fetch<D2LForumPage>(nextUrl)
       for (const forum of page.Objects) {
         for (const topic of forum.Topics ?? []) {
           if (!topic.DueDate) continue
