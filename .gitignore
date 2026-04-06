@@ -40,8 +40,12 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# local claude rules — keep private, never push
+# local claude / AI agent rules — keep private, never push
 .claude/
+CLAUDE.md
+AGENTS.md
+*.claude.md
+agents.md
 
 # reference docs
 API specs.txt
