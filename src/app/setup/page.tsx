@@ -11,14 +11,14 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
   const session = await validateSession()
   if (!session) redirect('/')
 
-  // if they already connected Brightspace, skip setup
   const { data: user } = await supabaseServer
     .from('users')
-    .select('brightspace_token_encrypted, display_name')
+    .select('brightspace_token_encrypted, brightspace_ical_url_encrypted, display_name')
     .eq('id', session.userId)
     .single()
 
-  if (user?.brightspace_token_encrypted) {
+  // either connection method means setup is done
+  if (user?.brightspace_token_encrypted || user?.brightspace_ical_url_encrypted) {
     redirect('/dashboard')
   }
 

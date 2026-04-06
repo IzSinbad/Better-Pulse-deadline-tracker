@@ -23,7 +23,8 @@ export default function LoadingPage() {
     // kick off the Brightspace sync and stream the progress
     const controller = new AbortController()
 
-    fetch('/api/brightspace/sync', {
+    // try the ICS sync first (most users), fall back to OAuth sync
+    fetch('/api/brightspace/sync-ical', {
       method: 'POST',
       signal: controller.signal,
     })
