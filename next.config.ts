@@ -32,7 +32,9 @@ const withPWA = require('next-pwa')({
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
-  // allow images from Microsoft profile pictures
+  // empty turbopack config silences the webpack/turbopack conflict warning from next-pwa
+  // next-pwa's webpack config is only active in production anyway (disabled in dev)
+  turbopack: {},
   images: {
     remotePatterns: [
       { protocol: 'https', hostname: 'graph.microsoft.com' },
