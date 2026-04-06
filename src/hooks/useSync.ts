@@ -25,7 +25,7 @@ export function useSync(onComplete?: () => void): SyncState {
 
     const controller = new AbortController()
 
-    fetch('/api/brightspace/sync', {
+    fetch('/api/brightspace/sync-ical', {
       method: 'POST',
       signal: controller.signal,
     })
