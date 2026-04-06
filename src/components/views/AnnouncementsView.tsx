@@ -296,11 +296,14 @@ export function AnnouncementsView() {
   )
 }
 
-function formatDate(date: Date): string {
-  const diff = Date.now() - date.getTime()
+function formatDate(date: Date | string | null): string {
+  if (!date) return ''
+  const d = typeof date === 'string' ? new Date(date) : date
+  if (isNaN(d.getTime())) return ''
+  const diff = Date.now() - d.getTime()
   const days = Math.floor(diff / 86400000)
   if (days === 0) return 'Today'
   if (days === 1) return 'Yesterday'
   if (days < 7) return `${days} days ago`
-  return date.toLocaleDateString('en-CA', { month: 'short', day: 'numeric' })
+  return d.toLocaleDateString('en-CA', { month: 'short', day: 'numeric' })
 }

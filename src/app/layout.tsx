@@ -11,8 +11,8 @@ export const metadata: Metadata = {
     title: 'better_pulse',
   },
   icons: {
-    icon: '/icons/icon-192.png',
-    apple: '/icons/apple-touch-icon.png',
+    icon: '/icon.svg',
+    apple: '/icon.svg',
   },
 }
 
