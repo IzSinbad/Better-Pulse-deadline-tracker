@@ -1,17 +1,17 @@
-// setup page — shown exactly once after first login
-// students paste their Brightspace token and optionally their target grades
-// after this they go straight to the dashboard every time
-
 import { redirect } from 'next/navigation'
 import { validateSession } from '@/lib/session'
 import { supabaseServer } from '@/lib/supabase'
 import { SetupFlow } from '@/components/onboarding/SetupFlow'
 
-export default async function SetupPage() {
+interface SetupPageProps {
+  searchParams: Promise<{ error?: string }>
+}
+
+export default async function SetupPage({ searchParams }: SetupPageProps) {
   const session = await validateSession()
   if (!session) redirect('/')
 
-  // if they already have a token, they don't need setup
+  // if they already connected Brightspace, skip setup
   const { data: user } = await supabaseServer
     .from('users')
     .select('brightspace_token_encrypted, display_name')
@@ -22,5 +22,12 @@ export default async function SetupPage() {
     redirect('/dashboard')
   }
 
-  return <SetupFlow displayName={user?.display_name ?? 'there'} />
+  const params = await searchParams
+
+  return (
+    <SetupFlow
+      displayName={user?.display_name ?? 'there'}
+      error={params.error ?? null}
+    />
+  )
 }

@@ -11,6 +11,7 @@ create table if not exists users (
   email text not null,
   display_name text,
   brightspace_token_encrypted text,
+  brightspace_refresh_token_encrypted text,
   anthropic_key_encrypted text,
   created_at timestamptz default now(),
   last_login timestamptz

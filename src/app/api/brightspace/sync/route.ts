@@ -4,9 +4,9 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { validateSession } from '@/lib/session'
-import { decrypt } from '@/lib/encryption'
 import { supabaseServer } from '@/lib/supabase'
 import { BrightspaceAdapter } from '@/lib/adapters/brightspace'
+import { getValidBrightspaceToken } from '@/lib/brightspaceAuth'
 
 // we stream progress back as SSE so the loading screen can show live status
 // if the client doesn't support SSE, it just gets the final JSON
@@ -16,22 +16,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Not logged in' }, { status: 401 })
   }
 
-  // grab the user's encrypted Brightspace token
-  const { data: user, error: userError } = await supabaseServer
-    .from('users')
-    .select('brightspace_token_encrypted')
-    .eq('id', session.userId)
-    .single()
-
-  if (userError || !user?.brightspace_token_encrypted) {
+  // get a valid token — auto-refreshes if expired
+  let token: string
+  try {
+    token = await getValidBrightspaceToken(session.userId)
+  } catch {
     return NextResponse.json(
-      { error: 'No Brightspace token found — complete setup first' },
+      { error: 'Brightspace not connected — go to settings and reconnect' },
       { status: 400 }
     )
   }
 
-  const token = decrypt(user.brightspace_token_encrypted)
-  const baseUrl = process.env.BRIGHTSPACE_API_BASE_URL || 'https://learn.conestogac.on.ca'
+  const baseUrl = process.env.BRIGHTSPACE_API_BASE_URL || 'https://conestoga.desire2learn.com'
   const adapter = new BrightspaceAdapter(baseUrl, token)
 
   // use a streaming response so the frontend can show progress
