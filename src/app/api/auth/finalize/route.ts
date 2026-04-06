@@ -1,51 +1,53 @@
 // POST /api/auth/finalize
-// called after the Supabase magic link is confirmed
-// creates/updates the user in our DB and sets the 30-day session cookie
+// called from the client after Supabase confirms the magic link
+// receives user info in the request body, verifies via service role admin API,
+// then creates/updates our app user record and sets the 30-day session cookie
 
 import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
-import { createServerClient } from '@supabase/ssr'
 import { supabaseServer } from '@/lib/supabase'
 import { createSession, COOKIE_NAME, SESSION_DURATION_DAYS } from '@/lib/session'
 
+interface FinalizeBody {
+  email: string
+  supabaseUserId: string
+  displayName?: string
+}
+
 export async function POST(request: NextRequest) {
-  // create a Supabase client that can read the auth cookies from the request
-  const cookieStore = await cookies()
-
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll: () => cookieStore.getAll(),
-        setAll: (cookiesToSet) => {
-          cookiesToSet.forEach(({ name, value, options }) => {
-            cookieStore.set(name, value, options)
-          })
-        },
-      },
-    }
-  )
-
-  // get the authenticated user from Supabase's session
-  const { data: { user }, error } = await supabase.auth.getUser()
-
-  if (error || !user) {
-    return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
+  let body: FinalizeBody
+  try {
+    body = await request.json() as FinalizeBody
+  } catch {
+    return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
   }
 
-  // check if this user already exists in our DB
+  const { email, supabaseUserId, displayName } = body
+
+  if (!email || !supabaseUserId) {
+    return NextResponse.json({ error: 'Missing email or user ID' }, { status: 400 })
+  }
+
+  // verify this Supabase user actually exists using the service role admin API
+  // stops anyone from forging a finalize call with a random email
+  const { data: authData, error: authError } = await supabaseServer.auth.admin.getUserById(supabaseUserId)
+
+  if (authError || !authData?.user || authData.user.email !== email) {
+    console.error('Auth verification failed:', authError?.message)
+    return NextResponse.json({ error: 'Could not verify your identity' }, { status: 401 })
+  }
+
+  // check if this email already has an account in our users table
   const { data: existing } = await supabaseServer
     .from('users')
     .select('id, brightspace_ical_url_encrypted, brightspace_token_encrypted')
-    .eq('email', user.email!)
+    .eq('email', email)
     .single()
 
   let userId: string
   let isNewUser: boolean
 
   if (existing) {
-    // returning user — just update last login
     userId = existing.id
     isNewUser = !existing.brightspace_ical_url_encrypted && !existing.brightspace_token_encrypted
     await supabaseServer
@@ -53,20 +55,21 @@ export async function POST(request: NextRequest) {
       .update({ last_login: new Date().toISOString() })
       .eq('id', userId)
   } else {
-    // brand new user — create their record
+    // first login — create their record
     const { data: newUser, error: insertError } = await supabaseServer
       .from('users')
       .insert({
-        microsoft_user_id: user.id, // using supabase user id in the microsoft_user_id field — same purpose
-        email: user.email!,
-        display_name: user.email!.split('@')[0], // e.g. "afarid8011"
+        microsoft_user_id: supabaseUserId,
+        email,
+        display_name: displayName ?? email.split('@')[0],
         last_login: new Date().toISOString(),
       })
       .select('id')
       .single()
 
     if (insertError || !newUser) {
-      return NextResponse.json({ error: 'Failed to create user' }, { status: 500 })
+      console.error('Failed to insert user:', insertError)
+      return NextResponse.json({ error: 'Failed to create your account' }, { status: 500 })
     }
 
     userId = newUser.id
@@ -78,6 +81,7 @@ export async function POST(request: NextRequest) {
   const sessionToken = await createSession(userId, deviceHint)
 
   const isProd = (process.env.NEXTAUTH_URL || '').startsWith('https://')
+  const cookieStore = await cookies()
   cookieStore.set(COOKIE_NAME, sessionToken, {
     httpOnly: true,
     secure: isProd,

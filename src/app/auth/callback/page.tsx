@@ -1,7 +1,7 @@
 'use client'
 
-// handles the magic link click — Supabase redirects here after the user clicks their email link
-// we confirm the session, create/update the user in our DB, set our session cookie, then redirect
+// handles the magic link click
+// gets the user from the client-side Supabase session, sends their info to finalize
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -20,40 +20,49 @@ export default function AuthCallbackPage() {
   useEffect(() => {
     async function handleCallback() {
       try {
-        // Supabase puts the session tokens in the URL hash — grab them
-        const { data: { session }, error } = await supabase.auth.getSession()
+        // Supabase puts tokens in the URL hash after magic link click
+        // need to manually extract and set the session from the hash
+        const hashParams = new URLSearchParams(window.location.hash.slice(1))
+        const accessToken = hashParams.get('access_token')
+        const refreshToken = hashParams.get('refresh_token')
 
-        if (error || !session) {
-          // try to exchange the code/token from the URL if direct session didn't work
-          const hashParams = new URLSearchParams(window.location.hash.slice(1))
-          const accessToken = hashParams.get('access_token')
-          const refreshToken = hashParams.get('refresh_token')
+        if (accessToken && refreshToken) {
+          await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken })
+        }
 
-          if (accessToken && refreshToken) {
-            await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken })
-            const { data: { session: newSession } } = await supabase.auth.getSession()
-            if (!newSession) throw new Error('Could not establish session')
-          } else {
-            throw new Error('No session found in the login link — it may have expired')
-          }
+        // now get the confirmed user
+        const { data: { user }, error } = await supabase.auth.getUser()
+
+        if (error || !user) {
+          throw new Error('Login link expired or invalid — try requesting a new one')
+        }
+
+        if (!user.email) {
+          throw new Error('Could not get your email from the login link')
         }
 
         setStatus('Login confirmed! Setting things up...')
 
-        // now call our API to create/update the user record and set our session cookie
+        // send user info to the server to create/update the DB record + set our session cookie
+        // we pass the email and supabase user id — the server verifies via service role
         const res = await fetch('/api/auth/finalize', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: user.email,
+            supabaseUserId: user.id,
+            displayName: user.user_metadata?.full_name ?? user.email.split('@')[0],
+          }),
         })
 
         if (!res.ok) {
-          throw new Error('Failed to complete login setup')
+          const errData = await res.json() as { error?: string }
+          throw new Error(errData.error ?? 'Failed to complete login setup')
         }
 
         const data = await res.json() as { isNewUser: boolean }
         setStatus('All set! Redirecting...')
 
-        // new user → setup, returning user → dashboard
         setTimeout(() => {
           router.push(data.isNewUser ? '/setup' : '/dashboard')
         }, 500)
@@ -89,7 +98,7 @@ export default function AuthCallbackPage() {
           <div className="text-center space-y-3">
             <p className="text-sm" style={{ color: 'var(--urgent-critical)' }}>{status}</p>
             <a href="/" className="text-sm underline" style={{ color: 'var(--accent)' }}>
-              Back to login
+              Back to login →
             </a>
           </div>
         )}
