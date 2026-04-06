@@ -4,7 +4,7 @@
 // sidebar | main content area | assistant panel
 // this is a client component so we can manage view state, dark mode, etc.
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Sidebar } from './Sidebar'
 import { AssistantPanel } from './AssistantPanel'
 
@@ -26,8 +26,17 @@ interface DashboardShellProps {
 export function DashboardShell({ user, preferences, children }: DashboardShellProps) {
   const [isDark, setIsDark] = useState(preferences.dark_mode)
   const [activeFilter, setActiveFilter] = useState<string>('all')
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true)
-  const [isAssistantOpen, setIsAssistantOpen] = useState(true)
+  // start both panels closed — open them after mount only on wide screens
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+  const [isAssistantOpen, setIsAssistantOpen] = useState(false)
+
+  // open panels by default on desktop, keep closed on mobile
+  useEffect(() => {
+    if (window.innerWidth >= 1024) {
+      setIsSidebarOpen(true)
+      setIsAssistantOpen(true)
+    }
+  }, [])
 
   function toggleDarkMode() {
     setIsDark(prev => !prev)
@@ -102,19 +111,30 @@ export function DashboardShell({ user, preferences, children }: DashboardShellPr
         </div>
       </div>
 
-      {/* right panel — assistant chat */}
-      <div
-        style={{
-          width: isAssistantOpen ? 'var(--panel-width)' : '0',
-          overflow: 'hidden',
-          transition: 'width 0.25s ease',
-          flexShrink: 0,
-          borderLeft: '1px solid var(--border)',
-          background: 'var(--bg-surface)',
-        }}
-      >
-        {isAssistantOpen && <AssistantPanel />}
-      </div>
+      {/* right panel — assistant chat, overlays on mobile */}
+      {isAssistantOpen && (
+        <>
+          {/* mobile backdrop */}
+          <div
+            className="fixed inset-0 z-20 lg:hidden"
+            style={{ background: 'rgba(0,0,0,0.5)' }}
+            onClick={() => setIsAssistantOpen(false)}
+          />
+          <div
+            className="fixed right-0 top-0 bottom-0 z-30 lg:static lg:z-auto"
+            style={{
+              width: 'var(--panel-width)',
+              maxWidth: '90vw',
+              borderLeft: '1px solid var(--border)',
+              background: 'var(--bg-surface)',
+              overflow: 'hidden',
+              flexShrink: 0,
+            }}
+          >
+            <AssistantPanel />
+          </div>
+        </>
+      )}
     </div>
   )
 }

@@ -3,6 +3,7 @@
 // the full detail view that slides in when you click a deadline card
 // shows everything: course, weight, grade needed, time estimate, Brightspace link
 
+import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { EnrichedDeadline } from '@/types/app'
 import { Badge } from '@/components/ui/Badge'
@@ -12,10 +13,28 @@ import { useCountdown } from '@/hooks/useCountdown'
 interface DetailPanelProps {
   deadline: EnrichedDeadline
   onClose: () => void
+  onCompleted?: (id: string) => void
 }
 
-export function DetailPanel({ deadline: d, onClose }: DetailPanelProps) {
+export function DetailPanel({ deadline: d, onClose, onCompleted }: DetailPanelProps) {
   const countdown = useCountdown(d.due_at)
+  const [isMarkingDone, setIsMarkingDone] = useState(false)
+
+  async function handleMarkDone() {
+    if (isMarkingDone) return
+    setIsMarkingDone(true)
+    try {
+      const res = await fetch(`/api/deadlines/${d.id}/complete`, { method: 'PATCH' })
+      if (res.ok) {
+        onCompleted?.(d.id)
+        onClose()
+      }
+    } catch {
+      // silent fail
+    } finally {
+      setIsMarkingDone(false)
+    }
+  }
 
   return (
     <AnimatePresence>
@@ -179,6 +198,31 @@ export function DetailPanel({ deadline: d, onClose }: DetailPanelProps) {
               </p>
             </div>
           )}
+
+          {/* mark as done — useful when Brightspace already has a submission but the calendar still shows it */}
+          <button
+            onClick={handleMarkDone}
+            disabled={isMarkingDone}
+            className="flex items-center justify-center gap-2 w-full py-3 rounded-xl text-sm font-medium transition-colors"
+            style={{
+              background: 'var(--bg-elevated)',
+              color: 'var(--text-secondary)',
+              border: '1px solid var(--border)',
+              cursor: isMarkingDone ? 'not-allowed' : 'pointer',
+              opacity: isMarkingDone ? 0.6 : 1,
+            }}
+            onMouseEnter={e => {
+              if (!isMarkingDone) (e.currentTarget as HTMLButtonElement).style.background = 'var(--bg-hover)'
+            }}
+            onMouseLeave={e => {
+              (e.currentTarget as HTMLButtonElement).style.background = 'var(--bg-elevated)'
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+            {isMarkingDone ? 'Marking done...' : 'Mark as done'}
+          </button>
 
           {/* open in Brightspace button */}
           {d.deeplink_url && (
