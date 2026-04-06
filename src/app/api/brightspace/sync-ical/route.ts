@@ -45,6 +45,16 @@ export async function POST(request: NextRequest) {
         const deadlines = await fetchICalDeadlines(feedUrl)
         send('status', { message: `Found ${deadlines.length} upcoming deadlines — saving...` })
 
+        // fetch which deadlines the user already marked done — preserve that across syncs
+        const { data: completed } = await supabaseServer
+          .from('deadlines')
+          .select('brightspace_id')
+          .eq('user_id', session.userId)
+          .eq('is_completed', true)
+          .eq('is_manual', false)
+
+        const completedIds = new Set((completed ?? []).map(d => d.brightspace_id).filter(Boolean))
+
         // wipe old synced deadlines and replace with fresh ones
         await supabaseServer
           .from('deadlines')
@@ -67,10 +77,11 @@ export async function POST(request: NextRequest) {
             title: d.title,
             type: d.type,
             due_at: d.dueAt?.toISOString() ?? null,
-            weight_percent: null, // not available in ICS — needs manual entry
+            weight_percent: null,
             description: d.description,
             deeplink_url: d.deeplinkUrl,
-            is_completed: false,
+            // if this deadline was marked done before the sync, keep it done
+            is_completed: completedIds.has(d.uid ?? ''),
             is_manual: false,
             synced_at: new Date().toISOString(),
           }))
