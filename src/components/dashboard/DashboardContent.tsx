@@ -4,13 +4,19 @@
 // sits inside the DashboardShell, between the sidebar and assistant panel
 
 import { useState, useMemo } from 'react'
+import dynamic from 'next/dynamic'
 import { useDeadlines } from '@/hooks/useDeadlines'
 import { WorkloadHeatmap } from './WorkloadHeatmap'
 import { TimelineView } from '@/components/views/TimelineView'
 import { CalendarView } from '@/components/views/CalendarView'
 import { CourseView } from '@/components/views/CourseView'
 import { UrgentView } from '@/components/views/UrgentView'
-import { AnnouncementsView } from '@/components/views/AnnouncementsView'
+
+// lazy load so a crash in announcements doesn't take down the whole dashboard
+const AnnouncementsView = dynamic(
+  () => import('@/components/views/AnnouncementsView').then(m => ({ default: m.AnnouncementsView })),
+  { ssr: false, loading: () => <div className="flex items-center justify-center py-16"><div className="w-5 h-5 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin" /></div> }
+)
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import { URGENCY_THRESHOLDS } from '@/types/app'
 
