@@ -21,25 +21,30 @@ export function DeadlineCard({ deadline: d, onCompleted }: DeadlineCardProps) {
   const [isHovered, setIsHovered] = useState(false)
   const [isMarkingDone, setIsMarkingDone] = useState(false)
   const [isDone, setIsDone] = useState(false)
+  const [doneError, setDoneError] = useState('')
   const countdown = useCountdown(d.due_at)
 
   const urgencyStrip = urgencyStripClass(d.urgency)
 
   async function handleMarkDone(e: React.MouseEvent) {
-    // stop click from opening the detail panel
     e.stopPropagation()
     if (isMarkingDone) return
 
     setIsMarkingDone(true)
+    setDoneError('')
     try {
       const res = await fetch(`/api/deadlines/${d.id}/complete`, { method: 'PATCH' })
       if (res.ok) {
         setIsDone(true)
-        // give it a moment so the user sees the checkmark, then remove from list
         setTimeout(() => onCompleted?.(d.id), 600)
+      } else {
+        const body = await res.json().catch(() => ({}))
+        setDoneError(body.error ?? `Error ${res.status}`)
+        setTimeout(() => setDoneError(''), 3000)
       }
     } catch {
-      // silently fail — not the end of the world
+      setDoneError('Network error')
+      setTimeout(() => setDoneError(''), 3000)
     } finally {
       setIsMarkingDone(false)
     }
@@ -120,8 +125,8 @@ export function DeadlineCard({ deadline: d, onCompleted }: DeadlineCardProps) {
           </div>
 
           <div className="flex items-center justify-between mt-2">
-            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-              {formatDueDate(d.due_at)}
+            <span className="text-xs" style={{ color: doneError ? 'var(--urgent-critical)' : 'var(--text-muted)' }}>
+              {doneError || formatDueDate(d.due_at)}
             </span>
 
             {/* mark done button — always visible, not just on hover */}
