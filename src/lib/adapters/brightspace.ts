@@ -1,5 +1,5 @@
 // D2L Brightspace adapter — talks to the Brightspace REST API
-// Conestoga uses: https://learn.conestogac.on.ca/d2l/api/
+// Conestoga uses: https://conestoga.desire2learn.com/d2l/api/
 //
 // auth flow: Bearer token in Authorization header
 // we get the token from the user on setup, store it encrypted, decrypt on use
